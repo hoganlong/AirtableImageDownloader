@@ -1,0 +1,159 @@
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                    AIRTABLE IMAGE DOWNLOADER SYSTEM                         │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│  AIRTABLE BASE (appnGXIULYw1ZA6bF)                                           │
+│  ┌─────────────────────┐         ┌─────────────────────┐                    │
+│  │  ARTWORK_IMAGE      │         │  ARCHIVE_IMAGE      │                    │
+│  │  ┌───────────────┐  │         │  ┌───────────────┐  │                    │
+│  │  │ Record 1      │  │         │  │ Record 1      │  │                    │
+│  │  │ - id: recABC  │  │         │  │ - id: recXYZ  │  │                    │
+│  │  │ - image: [📷] │  │         │  │ - image: [📷] │  │                    │
+│  │  └───────────────┘  │         │  └───────────────┘  │                    │
+│  │  ┌───────────────┐  │         │  ┌───────────────┐  │                    │
+│  │  │ Record 2      │  │         │  │ Record 2      │  │                    │
+│  │  │ - id: recDEF  │  │         │  │ - id: recUVW  │  │                    │
+│  │  │ - image: [📷] │  │         │  │ - image: [📷] │  │                    │
+│  │  └───────────────┘  │         │  └───────────────┘  │                    │
+│  └─────────────────────┘         └─────────────────────┘                    │
+└──────────────────────────────────────────────────────────────────────────────┘
+                                    │
+                                    │ HTTPS API Calls
+                                    ▼
+┌──────────────────────────────────────────────────────────────────────────────┐
+│  AIRTABLE IMAGE DOWNLOADER (.NET Application)                                │
+│                                                                               │
+│  ┌─────────────────────────────────────────────────────────────────────┐    │
+│  │ Main()                                                              │    │
+│  │  • Load appsettings.json                                           │    │
+│  │  • Validate API key & Base ID                                      │    │
+│  │  • Call ProcessTable() for each table                              │    │
+│  └─────────────────┬───────────────────────────────────────────────────┘    │
+│                    │                                                          │
+│  ┌─────────────────▼───────────────────────────────────────────────────┐    │
+│  │ ProcessTable(tableName, prefix)                                    │    │
+│  │  • Create subdirectory (artwork/ or archive/)                      │    │
+│  │  • Fetch all records → FetchAirtableRecords()                      │    │
+│  │  • For each record:                                                │    │
+│  │    - Find attachment fields                                        │    │
+│  │    - For each image:                                               │    │
+│  │      • Check if file exists (resume support)                       │    │
+│  │      • Download if missing → DownloadImage()                       │    │
+│  │      • Process thumbnails (small, large, etc.)                     │    │
+│  │  • Report statistics                                               │    │
+│  └─────────────────┬───────────────────────────────────────────────────┘    │
+│                    │                                                          │
+│  ┌─────────────────▼───────────────────────────────────────────────────┐    │
+│  │ FetchAirtableRecords(tableName)                                    │    │
+│  │  • GET https://api.airtable.com/v0/{baseId}/{tableName}           │    │
+│  │  • Handle pagination (offset tokens)                               │    │
+│  │  • Return all records as JSON                                      │    │
+│  └─────────────────┬───────────────────────────────────────────────────┘    │
+│                    │                                                          │
+│  ┌─────────────────▼───────────────────────────────────────────────────┐    │
+│  │ DownloadImage(url, path)                                           │    │
+│  │  • HTTP GET to image URL                                           │    │
+│  │  • Write bytes to file system                                      │    │
+│  └─────────────────┬───────────────────────────────────────────────────┘    │
+└────────────────────┼──────────────────────────────────────────────────────────┘
+                     │
+                     │ File System Operations
+                     ▼
+┌──────────────────────────────────────────────────────────────────────────────┐
+│  LOCAL FILE SYSTEM                                                           │
+│                                                                               │
+│  images/                                                                      │
+│  ├── artwork/                                                                 │
+│  │   ├── artwork_recABC_1920x1080.jpg        ← Full size                    │
+│  │   ├── artwork_recABC_small_200x150.jpg    ← Small thumbnail              │
+│  │   ├── artwork_recABC_large_1000x750.jpg   ← Large thumbnail              │
+│  │   ├── artwork_recDEF_1920x1080.jpg                                       │
+│  │   └── artwork_recDEF_small_200x150.jpg                                   │
+│  │                                                                            │
+│  └── archive/                                                                 │
+│      ├── archive_recXYZ_2048x1536.png        ← Full size                    │
+│      ├── archive_recXYZ_small_256x192.png    ← Small thumbnail              │
+│      ├── archive_recUVW_1600x1200.jpg                                       │
+│      └── archive_recUVW_large_800x600.jpg    ← Large thumbnail              │
+│                                                                               │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+═══════════════════════════════════════════════════════════════════════════════
+
+DATA FLOW SEQUENCE:
+
+1. START → Load Configuration (appsettings.json)
+              ↓
+2. Validate API Key & Base ID
+              ↓
+3. Process ARTWORK_IMAGE
+              ↓
+   ├─→ Fetch Records (paginated API calls)
+   │          ↓
+   ├─→ For each record:
+   │   ├─→ Extract record ID (e.g., recABC)
+   │   ├─→ Find attachment fields
+   │   └─→ For each attachment:
+   │       ├─→ Check: Does artwork_recABC_1920x1080.jpg exist?
+   │       │   ├─ YES → Skip (⊘)
+   │       │   └─ NO  → Download (✓)
+   │       └─→ Process thumbnails (small, large)
+   │
+4. Process ARCHIVE_IMAGE (same steps)
+              ↓
+5. Report Statistics & Complete
+
+═══════════════════════════════════════════════════════════════════════════════
+
+NAMING PATTERN:
+
+  artwork_recA1B2C3D4_1920x1080.jpg
+  │       │           │         └── Extension (.jpg, .png, .gif)
+  │       │           └────────── Size/Dimensions
+  │       └────────────────────── Airtable Record ID
+  └────────────────────────────── Table Prefix (artwork/archive)
+
+SIZE VARIANTS:
+  • Full size:  {width}x{height}              (e.g., 1920x1080)
+  • Thumbnail:  {name}_{width}x{height}       (e.g., small_200x150)
+
+═══════════════════════════════════════════════════════════════════════════════
+
+RESUME CAPABILITY:
+
+Run 1:  Download 100 images → [Interrupted!]
+        ↓
+Run 2:  Check existing files → Skip 100 → Download remaining
+        ↓
+Run 3:  Check existing files → All exist → Nothing to download
+
+═══════════════════════════════════════════════════════════════════════════════
+
+RELATED SYSTEMS:
+
+┌──────────────────────┐
+│ AirtableToPostgres   │ ← Syncs DATA to PostgreSQL
+│ (Sibling Project)    │   (NOT images)
+└──────────────────────┘
+         ↑
+         │ Shares Airtable credentials
+         │ Same base, different purpose
+         ↓
+┌──────────────────────┐
+│ AirtableImage        │ ← Downloads IMAGES to file system
+│ Downloader (This)    │   (NOT data)
+└──────────────────────┘
+
+═══════════════════════════════════════════════════════════════════════════════
+
+FUTURE ENHANCEMENT: Web Access via Amazon S3
+
+Current:  Airtable → Local File System
+                              ↓
+Future:   Airtable → Local File System → Amazon S3 Bucket
+                                              ↓
+                                         Web Browser Access
+                                         (https://bucket.s3.../artwork_rec123.jpg)
+
+═══════════════════════════════════════════════════════════════════════════════
