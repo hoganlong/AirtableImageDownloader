@@ -34,6 +34,7 @@ bld/
 # Configuration with sensitive data
 appsettings.json
 appsettings.*.json
+!appsettings.template.json
 
 # Downloaded images (large files)
 images/
