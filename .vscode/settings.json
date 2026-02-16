@@ -1,0 +1,4 @@
+{
+  "git.blame.statusBarItem.enabled": false,
+  "git.blame.ignoreWhitespace": true
+}

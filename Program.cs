@@ -78,8 +78,9 @@ class Program
 
     foreach (var record in records)
     {
-      var recordId = record["id"]?.ToString();
+     // var recordId = record["id"]?.ToString();
       var fields = record["fields"] as JObject;
+      var recordId = fields?["ID"]?.Value<string>();
 
       if (fields == null || string.IsNullOrEmpty(recordId))
         continue;
@@ -107,10 +108,10 @@ class Program
 
               // Determine size string
               var sizeString = "full";
-              if (!string.IsNullOrEmpty(width) && !string.IsNullOrEmpty(height))
-              {
-                sizeString = $"{width}x{height}";
-              }
+            //  if (!string.IsNullOrEmpty(width) && !string.IsNullOrEmpty(height))
+            //  {
+            //    sizeString = $"{width}x{height}";
+            //  }
 
               // Get file extension from filename
               var extension = Path.GetExtension(filename ?? ".jpg");
@@ -156,10 +157,10 @@ class Program
 
                   // Size string for thumbnail
                   var thumbSizeString = thumbnail.Name; // small, large, etc.
-                  if (!string.IsNullOrEmpty(thumbWidth) && !string.IsNullOrEmpty(thumbHeight))
-                  {
-                    thumbSizeString = $"{thumbnail.Name}_{thumbWidth}x{thumbHeight}";
-                  }
+              //    if (!string.IsNullOrEmpty(thumbWidth) && !string.IsNullOrEmpty(thumbHeight))
+              //    {
+              //      thumbSizeString = $"{thumbnail.Name}_{thumbWidth}x{thumbHeight}";
+              //    }
 
                   var thumbFilename = $"{prefix}_{recordId}_{thumbSizeString}{extension}";
                   var thumbPath = Path.Combine(tableDirectory, thumbFilename);
