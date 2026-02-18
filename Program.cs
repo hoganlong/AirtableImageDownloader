@@ -115,9 +115,14 @@ class Program
 
               // Get file extension from filename
               var extension = Path.GetExtension(filename ?? ".jpg");
+              if (String.Compare(extension, ".jpeg", true) == 0)
+              {
+                extension = ".jpg"; // Normalize jpeg to jpg
+              }
 
               // Build output filename: prefix_recordId_size.ext
-              var outputFilename = $"{prefix}_{recordId}_{sizeString}{extension}";
+              string v = $"{prefix}_{recordId}_{sizeString}{extension}".ToLower();
+              var outputFilename = v;
               var outputPath = Path.Combine(tableDirectory, outputFilename);
 
               // Check if file already exists
@@ -162,7 +167,7 @@ class Program
               //      thumbSizeString = $"{thumbnail.Name}_{thumbWidth}x{thumbHeight}";
               //    }
 
-                  var thumbFilename = $"{prefix}_{recordId}_{thumbSizeString}{extension}";
+                  var thumbFilename = $"{prefix}_{recordId}_{thumbSizeString}{extension}".ToLower();
                   var thumbPath = Path.Combine(tableDirectory, thumbFilename);
 
                   // Check if thumbnail already exists
