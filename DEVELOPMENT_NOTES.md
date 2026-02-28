@@ -254,6 +254,26 @@ Contains:
 - Key facts about both projects
 - No direct integration between projects
 
+---
+
+## Session - February 28, 2026
+
+### Changes Made
+
+#### Bug Fix: Thumbnails not downloading when full-size image already exists
+- **Problem**: `ProcessTable()` used `continue` after skipping an existing full-size image, which also skipped the thumbnail processing block below it
+- **Symptom**: Records where full-size image was already on disk would never get their thumbnails downloaded
+- **Fix**: Replaced `continue` with an `else` block wrapping the download logic, so thumbnail processing always runs regardless of whether the full-size image was skipped
+
+#### VS Code Launch Configuration
+- Added `.vscode/launch.json` with "Run AirtableImageDownloader" debug configuration
+- Added `.vscode/tasks.json` with `dotnet build` pre-launch task
+- Uses `coreclr` debugger, `integratedTerminal`, `cwd` set to workspace folder
+- Requires C# Dev Kit or C# extension in VS Code
+
+### Known Issues Fixed
+- Thumbnails now correctly downloaded even when full-size image was previously downloaded
+
 ### Status: COMPLETE ✓
 
 The project is fully functional and documented. Ready to run with `dotnet run`.

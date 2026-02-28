@@ -130,19 +130,20 @@ class Program
               {
                 skippedImages++;
                 Console.WriteLine($"  ⊘ Skipped (exists): {outputFilename}");
-                continue;
               }
-
-              // Download the image
-              try
+              else
               {
-                await DownloadImage(url, outputPath);
-                downloadedImages++;
-                Console.WriteLine($"  ✓ Downloaded: {outputFilename}");
-              }
-              catch (Exception ex)
-              {
-                Console.WriteLine($"  ✗ Failed to download {outputFilename}: {ex.Message}");
+                // Download the image
+                try
+                {
+                  await DownloadImage(url, outputPath);
+                  downloadedImages++;
+                  Console.WriteLine($"  ✓ Downloaded: {outputFilename}");
+                }
+                catch (Exception ex)
+                {
+                  Console.WriteLine($"  ✗ Failed to download {outputFilename}: {ex.Message}");
+                }
               }
 
               // Also process thumbnails if available
