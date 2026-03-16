@@ -115,9 +115,10 @@ class Program
 
               // Get file extension from filename
               var extension = Path.GetExtension(filename ?? ".jpg");
-              if (String.Compare(extension, ".jpeg", true) == 0)
+              if (String.Compare(extension, ".jpeg", true) == 0 ||
+                  String.Compare(extension, ".heic", true) == 0)
               {
-                extension = ".jpg"; // Normalize jpeg to jpg
+                extension = ".jpg"; // Normalize jpeg/heic to jpg
               }
 
               // Build output filename: prefix_recordId_size.ext
