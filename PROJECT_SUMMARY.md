@@ -323,6 +323,6 @@ dotnet --version
 ---
 
 **Last Updated**: February 15, 2026
-**Project Location**: `C:\Users\Hogan\Projects\claudetest\AirtableImageDownloader`
+**Project Location**: `D:\Projects\claudetest\AirtableImageDownloader`
 **Framework**: .NET 10.0
 **Status**: ✓ Complete and Ready to Use

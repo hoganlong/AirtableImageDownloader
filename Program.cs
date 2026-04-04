@@ -3,7 +3,7 @@ using Newtonsoft.Json.Linq;
 
 class Program
 {
-  static async Task Main(string[] args)
+  static async Task<int> Main(string[] args)
   {
     var configuration = new ConfigurationBuilder()
       .SetBasePath(Directory.GetCurrentDirectory())
@@ -17,7 +17,7 @@ class Program
     if (string.IsNullOrEmpty(airtableApiKey) || string.IsNullOrEmpty(airtableBaseId))
     {
       Console.WriteLine("Error: Airtable ApiKey and BaseId must be configured in appsettings.json");
-      return;
+      return 0;
     }
 
     Console.WriteLine("Starting Airtable Image Downloader...");
@@ -27,7 +27,7 @@ class Program
     try
     {
       // Process ARTWORK_IMAGE table
-      await ProcessTable(
+      int downloaded = await ProcessTable(
         airtableApiKey,
         airtableBaseId,
         "ARTWORK_IMAGE",
@@ -37,7 +37,7 @@ class Program
       Console.WriteLine();
 
       // Process ARCHIVE_IMAGE table
-      await ProcessTable(
+      downloaded += await ProcessTable(
         airtableApiKey,
         airtableBaseId,
         "ARCHIVE_IMAGE",
@@ -46,15 +46,17 @@ class Program
 
       Console.WriteLine();
       Console.WriteLine("Image download completed successfully!");
+      return downloaded;
     }
     catch (Exception ex)
     {
       Console.WriteLine($"Error: {ex.Message}");
       Console.WriteLine($"Stack trace: {ex.StackTrace}");
+      return 0;
     }
   }
 
-  static async Task ProcessTable(
+  static async Task<int> ProcessTable(
     string apiKey,
     string baseId,
     string tableName,
@@ -130,7 +132,7 @@ class Program
               if (File.Exists(outputPath))
               {
                 skippedImages++;
-                Console.WriteLine($"  ⊘ Skipped (exists): {outputFilename}");
+                Console.Write($"\r  ⊘ Files skipped already exist: {skippedImages}  ");
               }
               else
               {
@@ -176,7 +178,7 @@ class Program
                   if (File.Exists(thumbPath))
                   {
                     skippedImages++;
-                    Console.WriteLine($"  ⊘ Skipped (exists): {thumbFilename}");
+                    Console.Write($"\r  ⊘ Files skipped already exist: {skippedImages}  ");
                     continue;
                   }
 
@@ -198,10 +200,12 @@ class Program
       }
     }
 
+    if (skippedImages > 0) Console.WriteLine();
     Console.WriteLine($"Total images found: {totalImages}");
     Console.WriteLine($"Successfully downloaded: {downloadedImages}");
     Console.WriteLine($"Skipped (already exist): {skippedImages}");
     Console.WriteLine($"Failed: {totalImages - downloadedImages - skippedImages}");
+    return downloadedImages;
   }
 
   static async Task<List<JObject>> FetchAirtableRecords(
