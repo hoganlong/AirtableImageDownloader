@@ -74,13 +74,14 @@ class Program
     var records = await FetchAirtableRecords(apiKey, baseId, tableName);
     Console.WriteLine($"Fetched {records.Count} records from {tableName}");
 
-    int totalImages = 0;
-    int downloadedImages = 0;
-    int skippedImages = 0;
+    int totalFiles = 0;
+    int downloadedFiles = 0;
+    int skippedFiles = 0;
+    int skippedSets = 0;
+    bool lastLineWasInPlace = false;
 
     foreach (var record in records)
     {
-     // var recordId = record["id"]?.ToString();
       var fields = record["fields"] as JObject;
       var recordId = fields?["ID"]?.Value<string>();
 
@@ -96,103 +97,82 @@ class Program
           var firstItem = attachments.FirstOrDefault() as JObject;
           if (firstItem?["url"] != null)
           {
-            // Process each attachment
             foreach (var attachment in attachments.Cast<JObject>())
             {
-              totalImages++;
               var url = attachment["url"]?.ToString();
               var filename = attachment["filename"]?.ToString();
-              var width = attachment["width"]?.ToString();
-              var height = attachment["height"]?.ToString();
 
               if (string.IsNullOrEmpty(url))
                 continue;
 
-              // Determine size string
-              var sizeString = "full";
-            //  if (!string.IsNullOrEmpty(width) && !string.IsNullOrEmpty(height))
-            //  {
-            //    sizeString = $"{width}x{height}";
-            //  }
-
               // Get file extension from filename
               var extension = Path.GetExtension(filename ?? ".jpg");
-              if (String.Compare(extension, ".jpeg", true) == 0 ||
-                  String.Compare(extension, ".heic", true) == 0)
-              {
-                extension = ".jpg"; // Normalize jpeg/heic to jpg
-              }
+              if (string.Compare(extension, ".jpeg", true) == 0 ||
+                  string.Compare(extension, ".heic", true) == 0)
+                extension = ".jpg";
 
-              // Build output filename: prefix_recordId_size.ext
-              string v = $"{prefix}_{recordId}_{sizeString}{extension}".ToLower();
-              var outputFilename = v;
-              var outputPath = Path.Combine(tableDirectory, outputFilename);
+              var baseName = $"{prefix}_{recordId}".ToLower();
 
-              // Check if file already exists
-              if (File.Exists(outputPath))
+              // Build the full set of (sizeName, path, downloadUrl) for this attachment
+              var sizes = new List<(string sizeName, string path, string dlUrl)>
               {
-                skippedImages++;
-                Console.Write($"\r  ⊘ Files skipped already exist: {skippedImages}  ");
-              }
-              else
-              {
-                // Download the image
-                try
-                {
-                  await DownloadImage(url, outputPath);
-                  downloadedImages++;
-                  Console.WriteLine($"  ✓ Downloaded: {outputFilename}");
-                }
-                catch (Exception ex)
-                {
-                  Console.WriteLine($"  ✗ Failed to download {outputFilename}: {ex.Message}");
-                }
-              }
+                ("full", Path.Combine(tableDirectory, $"{baseName}_full{extension}"), url)
+              };
 
-              // Also process thumbnails if available
               var thumbnails = attachment["thumbnails"] as JObject;
               if (thumbnails != null)
               {
                 foreach (var thumbnail in thumbnails.Properties())
                 {
-                  totalImages++;
                   var thumbObj = thumbnail.Value as JObject;
                   var thumbUrl = thumbObj?["url"]?.ToString();
-                  var thumbWidth = thumbObj?["width"]?.ToString();
-                  var thumbHeight = thumbObj?["height"]?.ToString();
+                  if (!string.IsNullOrEmpty(thumbUrl))
+                    sizes.Add((thumbnail.Name, Path.Combine(tableDirectory, $"{baseName}_{thumbnail.Name}{extension}"), thumbUrl));
+                }
+              }
 
-                  if (string.IsNullOrEmpty(thumbUrl))
-                    continue;
+              totalFiles += sizes.Count;
 
-                  // Size string for thumbnail
-                  var thumbSizeString = thumbnail.Name; // small, large, etc.
-              //    if (!string.IsNullOrEmpty(thumbWidth) && !string.IsNullOrEmpty(thumbHeight))
-              //    {
-              //      thumbSizeString = $"{thumbnail.Name}_{thumbWidth}x{thumbHeight}";
-              //    }
+              // Process each size, collect results
+              var setDownloaded = new List<string>();
+              var setFailed = new List<(string sizeName, string message)>();
 
-                  var thumbFilename = $"{prefix}_{recordId}_{thumbSizeString}{extension}".ToLower();
-                  var thumbPath = Path.Combine(tableDirectory, thumbFilename);
-
-                  // Check if thumbnail already exists
-                  if (File.Exists(thumbPath))
-                  {
-                    skippedImages++;
-                    Console.Write($"\r  ⊘ Files skipped already exist: {skippedImages}  ");
-                    continue;
-                  }
-
+              foreach (var (sizeName, path, dlUrl) in sizes)
+              {
+                if (File.Exists(path))
+                {
+                  skippedFiles++;
+                }
+                else
+                {
                   try
                   {
-                    await DownloadImage(thumbUrl, thumbPath);
-                    downloadedImages++;
-                    Console.WriteLine($"  ✓ Downloaded: {thumbFilename}");
+                    await DownloadImage(dlUrl, path);
+                    downloadedFiles++;
+                    setDownloaded.Add(sizeName);
                   }
                   catch (Exception ex)
                   {
-                    Console.WriteLine($"  ✗ Failed to download {thumbFilename}: {ex.Message}");
+                    setFailed.Add((sizeName, ex.Message));
                   }
                 }
+              }
+
+              // Print one summary line per set
+              if (setDownloaded.Count == 0 && setFailed.Count == 0)
+              {
+                // All files in this set already existed
+                skippedSets++;
+                Console.Write($"\r  ⊘ {skippedSets} sets already exist   ");
+                lastLineWasInPlace = true;
+              }
+              else
+              {
+                if (lastLineWasInPlace) { Console.WriteLine(); lastLineWasInPlace = false; }
+                if (setDownloaded.Count > 0)
+                  Console.WriteLine($"  ✓ {baseName}: {string.Join(", ", setDownloaded)}");
+                foreach (var (sizeName, msg) in setFailed)
+                  Console.WriteLine($"  ✗ {baseName}_{sizeName}: {msg}");
               }
             }
           }
@@ -200,12 +180,14 @@ class Program
       }
     }
 
-    if (skippedImages > 0) Console.WriteLine();
-    Console.WriteLine($"Total images found: {totalImages}");
-    Console.WriteLine($"Successfully downloaded: {downloadedImages}");
-    Console.WriteLine($"Skipped (already exist): {skippedImages}");
-    Console.WriteLine($"Failed: {totalImages - downloadedImages - skippedImages}");
-    return downloadedImages;
+    if (lastLineWasInPlace) Console.WriteLine();
+    int failedFiles = totalFiles - downloadedFiles - skippedFiles;
+    Console.WriteLine($"Total files:  {totalFiles}");
+    Console.WriteLine($"Downloaded:   {downloadedFiles}");
+    Console.WriteLine($"Skipped:      {skippedFiles}");
+    if (failedFiles > 0)
+      Console.WriteLine($"Failed:       {failedFiles}");
+    return downloadedFiles;
   }
 
   static async Task<List<JObject>> FetchAirtableRecords(
