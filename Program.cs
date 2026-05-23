@@ -3,8 +3,42 @@ using Newtonsoft.Json.Linq;
 
 class Program
 {
+  static void PrintUsage()
+  {
+    Console.WriteLine("Usage: dotnet run");
+    Console.WriteLine();
+    Console.WriteLine("Downloads every image attachment in the ARTWORK_IMAGE and ARCHIVE_IMAGE");
+    Console.WriteLine("tables to local disk. Each attachment becomes <prefix>_<recordId>_<size>.<ext>");
+    Console.WriteLine("under <OutputDirectory>/artwork/ and <OutputDirectory>/archive/.");
+    Console.WriteLine("Already-downloaded files are skipped (safe to re-run).");
+    Console.WriteLine();
+    Console.WriteLine("Options:");
+    Console.WriteLine("  -h, --help, -?, /?, ?            show this help and exit");
+    Console.WriteLine();
+    Console.WriteLine("Configuration (appsettings.json):");
+    Console.WriteLine("  Airtable:ApiKey                  personal access token");
+    Console.WriteLine("  Airtable:BaseId                  base to read");
+    Console.WriteLine("  ImageDownload:OutputDirectory    download root (default: images)");
+  }
+
   static async Task<int> Main(string[] args)
   {
+    if (args.Any(a => a is "-h" or "--help" or "-?" or "/?" or "?"))
+    {
+      PrintUsage();
+      return 0;
+    }
+    foreach (var a in args)
+    {
+      if (a.StartsWith("-") || a.StartsWith("/"))
+      {
+        Console.WriteLine($"Unknown option: {a}");
+        Console.WriteLine();
+        PrintUsage();
+        return 1;
+      }
+    }
+
     var configuration = new ConfigurationBuilder()
       .SetBasePath(Directory.GetCurrentDirectory())
       .AddJsonFile("appsettings.json")
@@ -72,6 +106,10 @@ class Program
 
     // Fetch records from Airtable
     var records = await FetchAirtableRecords(apiKey, baseId, tableName);
+    records.Sort((a, b) => string.Compare(
+      (a["fields"] as JObject)?["ID"]?.Value<string>(),
+      (b["fields"] as JObject)?["ID"]?.Value<string>(),
+      StringComparison.Ordinal));
     Console.WriteLine($"Fetched {records.Count} records from {tableName}");
 
     int totalFiles = 0;
