@@ -7,7 +7,7 @@ This project is part of a larger system for managing Keith Long Archive data fro
 ### Related Projects
 
 ```
-claudetest/
+KLA/
 ├── AirtableToPostgres/          # Data sync: Airtable → PostgreSQL
 │   ├── Syncs table data and schema
 │   ├── Maintains change history
