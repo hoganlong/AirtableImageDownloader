@@ -22,7 +22,7 @@ The application connects to Airtable using credentials stored in `appsettings.js
 ```json
 {
   "Airtable": {
-    "ApiKey": "patAqas0D0SfJ7LqG.47623f7892ee4fbe447262976bcfe976cae7e70c8a05e937f953da90d774ab78",
+    "ApiKey": "YOUR_AIRTABLE_API_KEY_HERE",
     "BaseId": "appnGXIULYw1ZA6bF"
   },
   "ImageDownload": {
@@ -38,7 +38,7 @@ The application connects to Airtable using credentials stored in `appsettings.js
 ### Database Connection
 The same PostgreSQL database used in AirtableToPostgres is referenced:
 ```
-Host: keithlong-archive.cluster-cwlmm0oodeot.us-east-1.rds.amazonaws.com
+Host: <cluster-endpoint>.rds.amazonaws.com
 Database: keithlongarchive
 ```
 

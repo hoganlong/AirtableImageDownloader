@@ -29,7 +29,7 @@ Both projects connect to the same Airtable base:
 
 ### PostgreSQL Database
 The AirtableToPostgres project syncs to:
-- **Host**: keithlong-archive.cluster-cwlmm0oodeot.us-east-1.rds.amazonaws.com
+- **Host**: <cluster-endpoint>.rds.amazonaws.com
 - **Database**: keithlongarchive
 
 This project (AirtableImageDownloader) does NOT interact with PostgreSQL - it only downloads files.
